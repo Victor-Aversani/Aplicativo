@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hiperdia - AMA/UBS Integrada Jardim Três Marias</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ubs: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+            },
+            sus: {
+              blue: '#005CA9',
+              dark: '#003869',
+              light: '#E6F0FA'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .large-text {
+      font-size: 1.2rem !important;
+    }
+    .large-text button, .large-text input, .large-text select {
+      font-size: 1.15rem !important;
+    }
+    .touch-target {
+      min-height: 48px;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-800 antialiased pb-24 md:pb-0">
+
+  <!-- TELA DE BLOQUEIO POR FALTA DE PERMISSÃO DE NOTIFICAÇÃO -->
+  <div id="blocked-screen" class="hidden fixed inset-0 bg-slate-900/95 z-[999] flex flex-col items-center justify-center p-6 text-center text-white">
+    <div class="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-4 border-2 border-rose-500/40 animate-pulse">
+      <i data-lucide="bell-off" class="w-10 h-10"></i>
+    </div>
+    <h2 class="text-2xl font-black mb-2">Acesso Bloqueado</h2>
+    <p class="text-sm font-medium text-slate-300 max-w-xs mb-6">
+      Esse aplicativo só funciona se você liberar as notificações para receber lembretes e avisos importantes.
+    </p>
+    <button onclick="requestNotificationPermission()" class="px-6 py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl shadow-lg text-sm touch-target transition flex items-center gap-2">
+      <i data-lucide="bell" class="w-5 h-5"></i>
+      <span>LIBERAR NOTIFICAÇÕES</span>
+    </button>
+  </div>
+
+  <!-- BARRA SUPERIOR (HEADER) -->
+  <header class="bg-sus-blue text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-md md:max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white p-2 rounded-xl text-sus-blue font-black flex items-center justify-center shadow-md">
+          <i data-lucide="heart-pulse" class="w-7 h-7 text-ubs-600"></i>
+        </div>
+        <div>
+          <h1 class="font-black text-lg sm:text-xl leading-none tracking-wide">AMA/UBS Jardim Três Marias</h1>
+          <p class="text-xs text-blue-100 font-medium mt-0.5">Acompanhamento do Idoso - Hiperdia</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleAccessibility()" title="Aumentar Letra" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold flex items-center gap-1 transition touch-target">
+          <i data-lucide="type" class="w-5 h-5"></i>
+          <span>A+</span>
+        </button>
+
+        <button id="btn-logout-header" onclick="openLogoutModal()" class="hidden px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow transition touch-target">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Sair</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner para Instalação PWA -->
+  <div id="pwa-banner" class="hidden bg-amber-500 text-slate-900 px-4 py-2.5 font-bold text-sm flex items-center justify-between shadow-md">
+    <div class="flex items-center space-x-2">
+      <i data-lucide="smartphone" class="w-5 h-5"></i>
+      <span>Instale este aplicativo no seu celular!</span>
+    </div>
+    <button onclick="installPWA()" class="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-xs font-black shadow hover:bg-amber-100 transition">
+      INSTALAR
+    </button>
+  </div>
+
+  <main class="max-w-md md:max-w-3xl mx-auto p-4 space-y-5">
+
+    <!-- TELA 1: LOGIN E CADASTRO -->
+    <section id="section-auth" class="bg-white rounded-3xl shadow-lg border-2 border-slate-200 overflow-hidden my-2">
+      <div class="flex border-b-2 border-slate-200 bg-slate-50">
+        <button id="tab-login-btn" onclick="switchAuthTab('login')" class="flex-1 py-4 text-center font-black text-base text-sus-blue border-b-4 border-sus-blue bg-white flex items-center justify-center gap-2">
+          <i data-lucide="log-in" class="w-5 h-5"></i>
+          ENTRAR
+        </button>
+        <button id="tab-register-btn" onclick="switchAuthTab('register')" class="flex-1 py-4 text-center font-black text-base text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2">
+          <i data-lucide="user-plus" class="w-5 h-5"></i>
+          CRIAR CONTA
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div class="text-center mb-6">
+          <div class="inline-flex p-4 bg-ubs-50 text-ubs-600 rounded-full mb-2 border border-ubs-100">
+            <i data-lucide="shield-check" class="w-10 h-10"></i>
+          </div>
+          <h2 id="auth-heading" class="text-xl font-black text-slate-800">Bem-vindo(a) ao seu aplicativo!</h2>
+          <p class="text-xs text-slate-500 font-medium mt-1">AMA/UBS Integrada Jardim Três Marias - Dr. Mauricio Zamijovsky</p>
+        </div>
+
+        <div id="auth-alert" class="hidden p-4 mb-4 rounded-2xl text-sm font-bold flex items-start gap-3 bg-rose-50 text-rose-800 border-2 border-rose-200">
+          <i data-lucide="alert-triangle" class="w-6 h-6 shrink-0 text-rose-600"></i>
+          <span id="auth-alert-text">Mensagem de erro</span>
+        </div>
+
+        <!-- FORMULÁRIO DE LOGIN -->
+        <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">Seu CPF *</label>
+            <input type="text" id="login-cpf" maxlength="14" placeholder="000.000.000-00" oninput="maskCPF(this)" required class="w-full pl-4 pr-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-sus-blue font-mono text-base font-bold text-slate-800 touch-target">
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">Sua Senha *</label>
+            <div class="relative">
+              <input type="password" id="login-password" placeholder="Digite sua senha" required class="w-full pl-4 pr-12 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-sus-blue text-base font-bold text-slate-800 touch-target">
+              <button type="button" onclick="togglePasswordVisibility('login-password', 'login-eye-icon')" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-800 touch-target" title="Ver Senha">
+                <i data-lucide="eye" id="login-eye-icon" class="w-6 h-6"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-4 bg-sus-blue hover:bg-sus-dark text-white font-black rounded-2xl shadow-lg text-base flex items-center justify-center gap-2 touch-target transition">
+            <span>ENTRAR NO APLICATIVO</span>
+            <i data-lucide="arrow-right" class="w-6 h-6"></i>
+          </button>
+        </form>
+
+        <!-- FORMULÁRIO DE CADASTRO -->
+        <form id="form-register" onsubmit="handleRegister(event)" class="hidden space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">Nome Completo *</label>
+            <input type="text" id="reg-name" placeholder="Ex: Maria das Dores Silva" required class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-ubs-600 text-base font-bold text-slate-800 touch-target">
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">E-mail *</label>
+            <input type="email" id="reg-email" placeholder="seuemail@exemplo.com" required class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-ubs-600 text-base font-bold text-slate-800 touch-target">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-black text-slate-700 uppercase">CPF *</label>
+              <span id="cpf-validation-tag" class="text-xs font-bold px-2 py-0.5 rounded-lg hidden"></span>
+            </div>
+            <input type="text" id="reg-cpf" maxlength="14" placeholder="000.000.000-00" oninput="maskCPF(this); checkCPFRealtime();" required class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-ubs-600 font-mono text-base font-bold text-slate-800 touch-target">
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">Nº do Cartão SUS (Opcional)</label>
+            <input type="text" id="reg-sus" maxlength="15" placeholder="700000000000000" class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-ubs-600 font-mono text-base font-bold text-slate-800 touch-target">
+          </div>
+
+          <div>
+            <label class="block text-xs font-black text-slate-700 uppercase mb-1">Crie uma Senha *</label>
+            <div class="relative">
+              <input type="password" id="reg-password" minlength="4" placeholder="No mínimo 4 dígitos" required class="w-full pl-4 pr-12 py-3.5 rounded-2xl border-2 border-slate-300 focus:border-ubs-600 text-base font-bold text-slate-800 touch-target">
+              <button type="button" onclick="togglePasswordVisibility('reg-password', 'reg-eye-icon')" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-slate-800 touch-target" title="Ver Senha">
+                <i data-lucide="eye" id="reg-eye-icon" class="w-6 h-6"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-4 bg-ubs-600 hover:bg-ubs-700 text-white font-black rounded-2xl shadow-lg text-base flex items-center justify-center gap-2 touch-target transition">
+            <i data-lucide="check-circle" class="w-6 h-6"></i>
+            <span>CONCLUIR MEU CADASTRO</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ÁREA LOGADA DO PACIENTE -->
+    <div id="app-dashboard" class="hidden space-y-5">
+
+      <!-- PERFIL DO IDOSO -->
+      <div class="bg-gradient-to-r from-sus-blue to-blue-900 text-white rounded-3xl p-5 shadow-lg border-2 border-blue-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-14 h-14 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-center text-white font-black text-2xl shadow">
+            <span id="patient-avatar">M</span>
+          </div>
+          <div>
+            <span class="bg-emerald-400 text-slate-900 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">Paciente Ativo</span>
+            <h2 id="patient-name" class="text-xl font-black leading-tight mt-0.5">Nome do Paciente</h2>
+            <p id="patient-cpf-display" class="text-xs text-blue-100 font-mono mt-0.5">CPF: 000.***.***-00</p>
+          </div>
+        </div>
+
+        <button onclick="openLogoutModal()" class="w-full sm:w-auto px-4 py-2.5 bg-rose-600/90 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>Trocar de Conta</span>
+        </button>
+      </div>
+
+      <!-- ABA ÚNICA: INÍCIO -->
+      <section id="tab-home" class="space-y-4">
+
+        <!-- QUADRO DE DICAS E LEMBRETE DA UNIDADE -->
+        <div class="p-5 bg-white rounded-3xl border-2 border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center space-x-3 text-sus-blue">
+            <i data-lucide="lightbulb" class="w-6 h-6 text-amber-500"></i>
+            <h3 class="font-black text-base text-slate-800">Lembrete da Unidade</h3>
+          </div>
+          <p class="text-sm text-slate-600 leading-relaxed font-medium">
+            Tome seus remédios sempre com um copo de água e evite sal extra na comida. Em caso de tontura ou dor forte na cabeça, entre em contato com a unidade.
+          </p>
+        </div>
+
+        <!-- TABELA DE INTERPRETAÇÃO DE PRESSÃO ARTERIAL -->
+        <div class="bg-white rounded-3xl border-2 border-slate-200 shadow-sm overflow-hidden p-5 space-y-4">
+          <div class="border-b-2 border-slate-100 pb-3">
+            <h3 class="font-black text-xl text-slate-900 tracking-tight flex items-center gap-2">
+              <i data-lucide="activity" class="w-6 h-6 text-rose-600"></i>
+              TABELA DE PRESSÃO ARTERIAL
+            </h3>
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">Como interpretar seus números?</p>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Normal -->
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-200 flex items-center gap-3">
+              <div class="p-2.5 bg-emerald-600 text-white rounded-xl shrink-0">
+                <i data-lucide="heart" class="w-6 h-6"></i>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-emerald-800">Menor que <span class="text-base font-black">12 por 8</span></div>
+                <div class="text-xs font-medium text-emerald-700">Valores dentro da faixa considerada normal.</div>
+              </div>
+            </div>
+
+            <!-- Atenção -->
+            <div class="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center gap-3">
+              <div class="p-2.5 bg-amber-500 text-white rounded-xl shrink-0">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-amber-900"><span class="text-base font-black">12 por 8</span> a <span class="text-base font-black">13,9 por 8,9</span></div>
+                <div class="text-xs font-medium text-amber-800">Merece atenção e acompanhamento.</div>
+              </div>
+            </div>
+
+            <!-- Avaliação Médica -->
+            <div class="p-3.5 rounded-2xl bg-orange-50 border-2 border-orange-200 flex items-center gap-3">
+              <div class="p-2.5 bg-orange-500 text-white rounded-xl shrink-0">
+                <i data-lucide="stethoscope" class="w-6 h-6"></i>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-orange-900"><span class="text-base font-black">14 por 9</span> a <span class="text-base font-black">15,9 por 9,9</span></div>
+                <div class="text-xs font-medium text-orange-800">Procure avaliação médica.</div>
+              </div>
+            </div>
+
+            <!-- Risco Elevado -->
+            <div class="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 flex items-center gap-3">
+              <div class="p-2.5 bg-rose-600 text-white rounded-xl shrink-0">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-rose-900"><span class="text-base font-black">16 por 10</span> a <span class="text-base font-black">17,9 por 10,9</span></div>
+                <div class="text-xs font-black text-rose-700 uppercase">Risco cardiovascular mais elevado.</div>
+              </div>
+            </div>
+
+            <!-- Urgente -->
+            <div class="p-3.5 rounded-2xl bg-red-100 border-2 border-red-400 flex items-center gap-3">
+              <div class="p-2.5 bg-red-700 text-white rounded-xl shrink-0">
+                <i data-lucide="siren" class="w-6 h-6"></i>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-red-950"><span class="text-base font-black">18 por 11</span> ou mais</div>
+                <div class="text-xs font-black text-red-800 uppercase">Necessita avaliação médica urgente.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD DE LIGAR PARA A UNIDADE -->
+          <div class="p-4 bg-rose-600 text-white rounded-2xl shadow-lg border-2 border-rose-800 space-y-2 mt-2">
+            <div class="flex items-center gap-2 font-black text-sm">
+              <i data-lucide="phone-call" class="w-5 h-5 animate-pulse"></i>
+              <span>ORIENTAÇÃO PARA NÍVEIS VERMELHOS</span>
+            </div>
+            <p class="text-xs font-medium text-rose-100 leading-relaxed">
+              Caso sua pressão esteja nos níveis vermelhos (a partir de 16x10 ou 18x11), ligue imediatamente para a nossa unidade:
+            </p>
+            <button onclick="callPhone('1152375900')" class="w-full py-3 bg-white text-rose-700 font-black rounded-xl text-base shadow flex items-center justify-center gap-2 touch-target">
+              <i data-lucide="phone" class="w-5 h-5"></i>
+              LIGAR PARA (11) 5237-5900
+            </button>
+          </div>
+
+          <p class="text-[10px] text-slate-400 text-center font-bold uppercase mt-2">Com base na Diretriz Brasileira de Hipertensão Arterial.</p>
+        </div>
+
+      </section>
+
+      <!-- ABA 2: REMÉDIOS -->
+      <section id="tab-meds" class="hidden space-y-4">
+        
+        <div class="p-5 bg-white rounded-3xl border-2 border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-black text-lg text-slate-800 flex items-center gap-2">
+                <i data-lucide="pill" class="w-6 h-6 text-ubs-600"></i>
+                Remédios Contínuos
+              </h3>
+              <p class="text-xs text-slate-500 font-medium">Sua rotina diária cadastrada</p>
+            </div>
+            <button onclick="openMedModal()" class="px-4 py-2.5 bg-ubs-600 hover:bg-ubs-700 text-white rounded-2xl text-xs font-black shadow flex items-center gap-1">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              Adicionar
+            </button>
+          </div>
+
+          <div id="meds-container" class="space-y-3"></div>
+        </div>
+
+      </section>
+
+      <!-- ABA 3: UBS E EMERGÊNCIA -->
+      <section id="tab-ubs" class="hidden space-y-4">
+        
+        <div class="p-5 bg-white rounded-3xl border-2 border-slate-200 shadow-sm space-y-4">
+          <h3 class="font-black text-lg text-slate-800 flex items-center gap-2">
+            <i data-lucide="hospital" class="w-6 h-6 text-sus-blue"></i>
+            Sua Unidade de Saúde
+          </h3>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <div>
+              <p class="text-xs font-bold text-slate-500 uppercase">Nome da Unidade</p>
+              <p class="text-base font-black text-slate-800">AMA/UBS Integrada Jardim Três Marias</p>
+              <p class="text-xs font-bold text-slate-600">Dr. Mauricio Zamijovsky</p>
+            </div>
+
+            <div class="border-t border-slate-200 pt-2">
+              <p class="text-xs font-bold text-slate-500 uppercase">Endereço</p>
+              <p class="text-xs text-slate-700 font-medium mt-0.5">Rua Breno Acioli, 19 - Vila São Francisco / Jardim Três Marias</p>
+              <p class="text-xs text-slate-500 font-medium">São Paulo - SP, CEP 03676-040</p>
+            </div>
+
+            <div class="border-t border-slate-200 pt-2 space-y-1">
+              <p class="text-xs font-bold text-slate-500 uppercase">Horários de Funcionamento</p>
+              <p class="text-xs text-slate-700 font-medium"><strong class="font-bold">UBS:</strong> Segunda a Sexta, das 07:00 às 19:00</p>
+              <p class="text-xs text-slate-700 font-medium"><strong class="font-bold">AMA:</strong> Segunda a Sábado, das 07:00 às 19:00</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-2">
+            <p class="text-xs font-black text-slate-700 uppercase">Telefone de Atendimento e Emergência</p>
+
+            <button onclick="callPhone('1152375900')" class="w-full p-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl shadow-lg flex items-center justify-between touch-target transition">
+              <div class="flex items-center space-x-3">
+                <i data-lucide="phone-call" class="w-7 h-7"></i>
+                <div class="text-left">
+                  <p class="text-xs font-bold uppercase text-rose-100">AMA/UBS Jardim Três Marias</p>
+                  <p class="text-xl font-black">(11) 5237-5900</p>
+                </div>
+              </div>
+              <span class="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-black">LIGAR AGORA</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- BOTTOM NAVIGATION (3 ABAS) -->
+  <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 z-40 shadow-lg">
+    <div class="max-w-md md:max-w-3xl mx-auto flex justify-around p-2">
+      <button onclick="switchMainTab('home')" id="nav-home" class="flex-1 py-2 flex flex-col items-center text-sus-blue font-black text-xs">
+        <i data-lucide="home" class="w-6 h-6"></i>
+        <span>Início</span>
+      </button>
+
+      <button onclick="switchMainTab('meds')" id="nav-meds" class="flex-1 py-2 flex flex-col items-center text-slate-500 hover:text-slate-800 font-bold text-xs">
+        <i data-lucide="pill" class="w-6 h-6"></i>
+        <span>Remédios</span>
+      </button>
+
+      <button onclick="switchMainTab('ubs')" id="nav-ubs" class="flex-1 py-2 flex flex-col items-center text-slate-500 hover:text-slate-800 font-bold text-xs">
+        <i data-lucide="phone" class="w-6 h-6"></i>
+        <span>Unidade</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MODAL: CADASTRAR MEDICAÇÃO -->
+  <div id="modal-med" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border-2 border-slate-300">
+      <button onclick="closeModal('modal-med')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-2">
+        <i data-lucide="x" class="w-7 h-7"></i>
+      </button>
+
+      <h3 class="text-xl font-black text-slate-800 mb-4">Novo Remédio</h3>
+
+      <form id="form-med" onsubmit="saveMedication(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Nome do Remédio *</label>
+          <input type="text" id="med-name" placeholder="Ex: Losartana 50mg" required class="w-full p-3.5 rounded-2xl border-2 border-slate-300 font-bold text-sm touch-target">
+        </div>
+
+        <div>
+          <label class="block text-xs font-black text-slate-700 mb-1">Horário de Tomar *</label>
+          <input type="time" id="med-time" required class="w-full p-3.5 rounded-2xl border-2 border-slate-300 font-bold text-base touch-target">
+        </div>
+
+        <button type="submit" class="w-full py-4 bg-ubs-600 hover:bg-ubs-700 text-white font-black rounded-2xl shadow-lg text-base touch-target transition">
+          SALVAR REMÉDIO
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SAIR -->
+  <div id="modal-logout" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-6 shadow-2xl text-center border-2 border-slate-300">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-full mx-auto flex items-center justify-center mb-3">
+        <i data-lucide="log-out" class="w-7 h-7"></i>
+      </div>
+      <h3 class="text-lg font-black text-slate-800 mb-1">Sair da sua conta?</h3>
+      <p class="text-xs text-slate-500 font-medium mb-5">Você poderá entrar novamente digitando o seu CPF e senha.</p>
+
+      <div class="flex gap-2">
+        <button onclick="closeModal('modal-logout')" class="flex-1 py-3 border-2 border-slate-300 text-slate-700 font-bold rounded-2xl text-xs touch-target">
+          Cancelar
+        </button>
+        <button onclick="confirmLogout()" class="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl text-xs shadow touch-target">
+          Sim, Sair
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INITIAL_USERS = [
+      {
+        cpf: "123.456.789-00",
+        name: "Maria das Dores Silva",
+        email: "maria.silva@exemplo.com",
+        susCard: "700123456789012",
+        password: "123"
+      }
+    ];
+
+    let currentUser = null;
+    let deferredPrompt = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initLocalStorage();
+      checkActiveSession();
+      setupPWA();
+      requestNotificationPermission(); // Solicita permissão ao carregar
+    });
+
+    // SISTEMA DE PERMISSÃO E BLOQUEIO POR NOTIFICAÇÃO
+    function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        alert("Este navegador não suporta notificações de sistema.");
+        return;
+      }
+
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          document.getElementById('blocked-screen').classList.add('hidden');
+        } else {
+          document.getElementById('blocked-screen').classList.remove('hidden');
+        }
+      });
+    }
+
+    function initLocalStorage() {
+      if (!localStorage.getItem('hiperdia_users')) {
+        localStorage.setItem('hiperdia_users', JSON.stringify(INITIAL_USERS));
+      }
+    }
+
+    function getUsers() {
+      return JSON.parse(localStorage.getItem('hiperdia_users')) || [];
+    }
+
+    function getUserByCPF(cpf) {
+      return getUsers().find(u => u.cpf === cpf);
+    }
+
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    function maskCPF(input) {
+      let value = input.value.replace(/\D/g, "");
+      if (value.length > 11) value = value.slice(0, 11);
+
+      value = value.replace(/(\d{3})(\d)/, "$1.$2");
+      value = value.replace(/(\d{3})(\d)/, "$1.$2");
+      value = value.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+      input.value = value;
+    }
+
+    function isValidCPF(cpf) {
+      const cleanCPF = cpf.replace(/\D/g, "");
+      if (cleanCPF.length !== 11 || /^(\d)\1{10}$/.test(cleanCPF)) return false;
+
+      let sum = 0, remainder;
+      for (let i = 1; i <= 9; i++) sum += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cleanCPF.substring(9, 10))) return false;
+
+      sum = 0;
+      for (let i = 1; i <= 10; i++) sum += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cleanCPF.substring(10, 11))) return false;
+
+      return true;
+    }
+
+    function checkCPFRealtime() {
+      const cpf = document.getElementById('reg-cpf').value;
+      const tag = document.getElementById('cpf-validation-tag');
+
+      if (cpf.length < 14) {
+        tag.classList.add('hidden');
+        return;
+      }
+
+      tag.classList.remove('hidden');
+
+      if (!isValidCPF(cpf)) {
+        tag.textContent = 'CPF Inválido';
+        tag.className = 'text-xs font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700';
+      } else if (getUserByCPF(cpf)) {
+        tag.textContent = 'CPF Já Cadastrado';
+        tag.className = 'text-xs font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800';
+      } else {
+        tag.textContent = 'CPF Válido!';
+        tag.className = 'text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800';
+      }
+    }
+
+    function switchAuthTab(tab) {
+      hideAuthAlert();
+      const loginBtn = document.getElementById('tab-login-btn');
+      const regBtn = document.getElementById('tab-register-btn');
+      const loginForm = document.getElementById('form-login');
+      const regForm = document.getElementById('form-register');
+
+      if (tab === 'login') {
+        loginBtn.className = 'flex-1 py-4 text-center font-black text-base text-sus-blue border-b-4 border-sus-blue bg-white flex items-center justify-center gap-2';
+        regBtn.className = 'flex-1 py-4 text-center font-black text-base text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2';
+        loginForm.classList.remove('hidden');
+        regForm.classList.add('hidden');
+      } else {
+        regBtn.className = 'flex-1 py-4 text-center font-black text-base text-ubs-600 border-b-4 border-ubs-600 bg-white flex items-center justify-center gap-2';
+        loginBtn.className = 'flex-1 py-4 text-center font-black text-base text-slate-500 hover:text-slate-700 flex items-center justify-center gap-2';
+        regForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      }
+    }
+
+    function showAuthAlert(msg) {
+      document.getElementById('auth-alert-text').textContent = msg;
+      document.getElementById('auth-alert').classList.remove('hidden');
+    }
+
+    function hideAuthAlert() {
+      document.getElementById('auth-alert').classList.add('hidden');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      hideAuthAlert();
+
+      const cpf = document.getElementById('login-cpf').value;
+      const pass = document.getElementById('login-password').value;
+
+      if (!isValidCPF(cpf)) {
+        showAuthAlert('O CPF digitado não é válido.');
+        return;
+      }
+
+      const user = getUserByCPF(cpf);
+      if (!user) {
+        showAuthAlert('CPF não encontrado. Alterne para a aba "CRIAR CONTA".');
+        return;
+      }
+
+      if (user.password !== pass) {
+        showAuthAlert('Senha incorreta. Verifique se digitou corretamente.');
+        return;
+      }
+
+      startSession(user);
+    }
+
+    function handleRegister(e) {
+      e.preventDefault();
+      hideAuthAlert();
+
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const cpf = document.getElementById('reg-cpf').value;
+      const susCard = document.getElementById('reg-sus').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      if (!isValidCPF(cpf)) {
+        showAuthAlert('Por favor, digite um CPF válido.');
+        return;
+      }
+
+      if (getUserByCPF(cpf)) {
+        showAuthAlert('Este CPF já está cadastrado no aplicativo! Entre na sua conta.');
+        return;
+      }
+
+      const newUser = { name, email, cpf, susCard, password };
+      const users = getUsers();
+      users.push(newUser);
+      localStorage.setItem('hiperdia_users', JSON.stringify(users));
+
+      startSession(newUser);
+    }
+
+    function startSession(user) {
+      currentUser = user;
+      localStorage.setItem('hiperdia_active_cpf', user.cpf);
+      renderDashboard();
+    }
+
+    function checkActiveSession() {
+      const cpf = localStorage.getItem('hiperdia_active_cpf');
+      if (cpf) {
+        const user = getUserByCPF(cpf);
+        if (user) {
+          currentUser = user;
+          renderDashboard();
+          return;
+        }
+      }
+      document.getElementById('section-auth').classList.remove('hidden');
+      document.getElementById('app-dashboard').classList.add('hidden');
+      document.getElementById('bottom-nav').classList.add('hidden');
+      document.getElementById('btn-logout-header').classList.add('hidden');
+    }
+
+    function openLogoutModal() {
+      document.getElementById('modal-logout').classList.remove('hidden');
+    }
+
+    function confirmLogout() {
+      localStorage.removeItem('hiperdia_active_cpf');
+      currentUser = null;
+      closeModal('modal-logout');
+      document.getElementById('app-dashboard').classList.add('hidden');
+      document.getElementById('bottom-nav').classList.add('hidden');
+      document.getElementById('btn-logout-header').classList.add('hidden');
+      document.getElementById('section-auth').classList.remove('hidden');
+      document.getElementById('form-login').reset();
+      document.getElementById('form-register').reset();
+      switchAuthTab('login');
+    }
+
+    function renderDashboard() {
+      document.getElementById('section-auth').classList.add('hidden');
+      document.getElementById('app-dashboard').classList.remove('hidden');
+      document.getElementById('bottom-nav').classList.remove('hidden');
+      document.getElementById('btn-logout-header').classList.remove('hidden');
+
+      document.getElementById('patient-name').textContent = currentUser.name;
+      document.getElementById('patient-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+      
+      const parts = currentUser.cpf.split('.');
+      document.getElementById('patient-cpf-display').textContent = `CPF: ${parts[0]}.***.***-${parts[2].slice(-2)}`;
+
+      updateDashboardRecords();
+    }
+
+    function getUserStorageKey(type) {
+      return `hiperdia_${currentUser.cpf}_${type}`;
+    }
+
+    function getMeds() {
+      return JSON.parse(localStorage.getItem(getUserStorageKey('meds'))) || [
+        { id: 1, name: 'Losartana 50mg', time: '08:00' },
+        { id: 2, name: 'Metformina 850mg', time: '12:00' }
+      ];
+    }
+
+    function updateDashboardRecords() {
+      const meds = getMeds();
+      renderMedsList(meds);
+    }
+
+    function renderMedsList(meds) {
+      const container = document.getElementById('meds-container');
+      if (meds.length === 0) {
+        container.innerHTML = '<div class="p-6 text-center text-xs text-slate-400 font-bold">Nenhum remédio cadastrado.</div>';
+        return;
+      }
+
+      container.innerHTML = meds.map(m => `
+        <div class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="p-3 bg-ubs-100 text-ubs-700 rounded-2xl">
+              <i data-lucide="pill" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-base font-black text-slate-800">${m.name}</p>
+              <p class="text-xs font-bold text-ubs-700">Horário: ${m.time}</p>
+            </div>
+          </div>
+          <button onclick="deleteMed(${m.id})" class="text-slate-300 hover:text-rose-600 p-2">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+          </button>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function switchMainTab(tab) {
+      ['home', 'meds', 'ubs'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        navBtn.className = 'flex-1 py-2 flex flex-col items-center text-slate-500 hover:text-slate-800 font-bold text-xs';
+      });
+
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${tab}`);
+      activeNav.className = 'flex-1 py-2 flex flex-col items-center text-sus-blue font-black text-xs';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function openMedModal() {
+      document.getElementById('modal-med').classList.remove('hidden');
+    }
+
+    function saveMedication(e) {
+      e.preventDefault();
+      const name = document.getElementById('med-name').value.trim();
+      const time = document.getElementById('med-time').value;
+
+      const meds = getMeds();
+      meds.push({ id: Date.now(), name, time });
+      localStorage.setItem(getUserStorageKey('meds'), JSON.stringify(meds));
+
+      closeModal('modal-med');
+      document.getElementById('form-med').reset();
+      updateDashboardRecords();
+    }
+
+    function deleteMed(id) {
+      const meds = getMeds().filter(m => m.id !== id);
+      localStorage.setItem(getUserStorageKey('meds'), JSON.stringify(meds));
+      updateDashboardRecords();
+    }
+
+    function callPhone(num) {
+      window.location.href = `tel:${num}`;
+    }
+
+    function toggleAccessibility() {
+      document.body.classList.toggle('large-text');
+    }
+
+    function setupPWA() {
+      const manifest = {
+        name: "Hiperdia UBS Jardim Três Marias",
+        short_name: "Hiperdia",
+        start_url: "./",
+        display: "standalone",
+        background_color: "#005CA9",
+        theme_color: "#005CA9",
+        icons: [{ src: "https://placehold.co/192x192/005CA9/ffffff?text=UBS", sizes: "192x192", type: "image/png" }]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+
+      // REGISTRO DO SERVICE WORKER
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('Erro SW:', err));
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('pwa-banner').classList.remove('hidden');
+      });
+    }
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+          document.getElementById('pwa-banner').classList.add('hidden');
+        });
+      }
+    }
+  </script>
+</body>
+</html>
