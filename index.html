@@ -48,9 +48,44 @@
     .touch-target {
       min-height: 48px;
     }
+    @keyframes ring {
+      0%, 100% { transform: rotate(0deg); }
+      10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+      20%, 40%, 60%, 80% { transform: rotate(10deg); }
+    }
+    .animate-ring {
+      animation: ring 1s infinite;
+    }
   </style>
 </head>
 <body class="h-full text-slate-800 antialiased pb-24 md:pb-0">
+
+  <!-- TELA DE ALARME ATIVO (TELA CHEIA QUANDO CHEGA O HORÁRIO) -->
+  <div id="alarm-screen" class="hidden fixed inset-0 bg-rose-600 z-[1000] flex flex-col items-center justify-between p-6 text-center text-white animate-pulse">
+    <div class="pt-8">
+      <span class="bg-black/30 text-white font-black text-xs px-4 py-1.5 rounded-full uppercase tracking-widest border border-white/20">
+        HORA DO REMÉDIO!
+      </span>
+    </div>
+
+    <div class="flex flex-col items-center">
+      <div class="w-28 h-28 bg-white text-rose-600 rounded-full flex items-center justify-center mb-6 shadow-2xl animate-ring">
+        <i data-lucide="bell-ring" class="w-16 h-16"></i>
+      </div>
+      <h2 id="alarm-med-time" class="text-3xl font-black mb-1">00:00</h2>
+      <h3 id="alarm-med-name" class="text-2xl font-black max-w-xs leading-tight">Nome do Remédio</h3>
+      <p class="text-sm font-bold text-rose-100 mt-2 max-w-xs">
+        Está na hora exata de tomar o seu medicamento.
+      </p>
+    </div>
+
+    <div class="w-full max-w-xs pb-6">
+      <button onclick="stopAlarm()" class="w-full py-5 bg-white hover:bg-slate-100 text-rose-700 font-black rounded-3xl shadow-2xl text-lg touch-target transition transform active:scale-95 flex items-center justify-center gap-3 border-4 border-rose-300">
+        <i data-lucide="check-circle-2" class="w-7 h-7"></i>
+        <span>TOMEI O REMÉDIO (DESATIVAR)</span>
+      </button>
+    </div>
+  </div>
 
   <!-- TELA DE BLOQUEIO POR FALTA DE PERMISSÃO DE NOTIFICAÇÃO -->
   <div id="blocked-screen" class="hidden fixed inset-0 bg-slate-900/95 z-[999] flex flex-col items-center justify-center p-6 text-center text-white">
@@ -476,14 +511,134 @@
 
     let currentUser = null;
     let deferredPrompt = null;
+    let audioContext = null;
+    let alarmInterval = null;
+    let vibrationInterval = null;
+    let activeNotification = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       initLocalStorage();
       checkActiveSession();
       setupPWA();
-      requestNotificationPermission(); // Solicita permissão ao carregar
+      requestNotificationPermission();
+      startAlarmChecker(); // Inicia monitoramento constante de horários
     });
+
+    // SISTEMA DE ALARME E ÁUDIO CONTÍNUO
+    function playAlarmSound() {
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+
+        const playBeep = () => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, audioContext.currentTime); // Tom alto (Nota A5)
+          gain.gain.setValueAtTime(1, audioContext.currentTime);
+
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+
+          osc.start();
+          osc.stop(audioContext.currentTime + 0.3);
+        };
+
+        playBeep();
+        alarmInterval = setInterval(playBeep, 600); // Toca a cada 600ms
+      } catch (e) {
+        console.log("Erro ao reproduzir som:", e);
+      }
+    }
+
+    function triggerVibration() {
+      if ("vibrate" in navigator) {
+        vibrationInterval = setInterval(() => {
+          navigator.vibrate([500, 200, 500, 200]);
+        }, 1500);
+      }
+    }
+
+    function triggerAlarm(medName, medTime) {
+      document.getElementById('alarm-med-name').textContent = medName;
+      document.getElementById('alarm-med-time').textContent = medTime;
+      document.getElementById('alarm-screen').classList.remove('hidden');
+
+      playAlarmSound();
+      triggerVibration();
+
+      // Dispara Notificação Fixa no Navegador/Celular
+      if ("Notification" in window && Notification.permission === "granted") {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(`⏰ HORA DO REMÉDIO: ${medName}`, {
+              body: `Horário: ${medTime}. Clique para desativar o alarme!`,
+              icon: 'https://placehold.co/192x192/005CA9/ffffff?text=UBS',
+              tag: 'med-alarm',
+              requireInteraction: true, // Notificação FIXA até ser clicada
+              vibrate: [500, 200, 500]
+            });
+          });
+        } else {
+          activeNotification = new Notification(`⏰ HORA DO REMÉDIO: ${medName}`, {
+            body: `Horário: ${medTime}. Clique para desativar o alarme!`,
+            requireInteraction: true
+          });
+        }
+      }
+    }
+
+    function stopAlarm() {
+      // Parar Som
+      if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+      // Parar Vibração
+      if (vibrationInterval) {
+        clearInterval(vibrationInterval);
+        vibrationInterval = null;
+        if ("vibrate" in navigator) navigator.vibrate(0);
+      }
+      // Esconder Tela
+      document.getElementById('alarm-screen').classList.add('hidden');
+
+      // Fechar Notificação
+      if (activeNotification) {
+        activeNotification.close();
+        activeNotification = null;
+      }
+    }
+
+    function startAlarmChecker() {
+      let triggeredMeds = {};
+
+      setInterval(() => {
+        if (!currentUser) return;
+
+        const now = new Date();
+        const currentTime = now.toTimeString().substring(0, 5); // Ex: "08:00"
+
+        const meds = getMeds();
+        meds.forEach(m => {
+          if (m.time === currentTime) {
+            // Garante que o alarme toque apenas uma vez por minuto cadastrado
+            const key = `${m.id}_${currentTime}`;
+            if (!triggeredMeds[key]) {
+              triggeredMeds[key] = true;
+              triggerAlarm(m.name, m.time);
+            }
+          }
+        });
+      }, 1000); // Checa a cada segundo
+    }
 
     // SISTEMA DE PERMISSÃO E BLOQUEIO POR NOTIFICAÇÃO
     function requestNotificationPermission() {
