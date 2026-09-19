@@ -522,7 +522,7 @@
       checkActiveSession();
       setupPWA();
       requestNotificationPermission();
-      startAlarmChecker(); // Inicia monitoramento constante de horários
+      startAlarmChecker();
     });
 
     // SISTEMA DE ALARME E ÁUDIO CONTÍNUO
@@ -541,7 +541,7 @@
           const gain = audioContext.createGain();
 
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(880, audioContext.currentTime); // Tom alto (Nota A5)
+          osc.frequency.setValueAtTime(880, audioContext.currentTime);
           gain.gain.setValueAtTime(1, audioContext.currentTime);
 
           osc.connect(gain);
@@ -552,7 +552,7 @@
         };
 
         playBeep();
-        alarmInterval = setInterval(playBeep, 600); // Toca a cada 600ms
+        alarmInterval = setInterval(playBeep, 600);
       } catch (e) {
         console.log("Erro ao reproduzir som:", e);
       }
@@ -574,43 +574,33 @@
       playAlarmSound();
       triggerVibration();
 
-      // Dispara Notificação Fixa no Navegador/Celular
-      if ("Notification" in window && Notification.permission === "granted") {
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(registration => {
-            registration.showNotification(`⏰ HORA DO REMÉDIO: ${medName}`, {
-              body: `Horário: ${medTime}. Clique para desativar o alarme!`,
-              icon: 'https://placehold.co/192x192/005CA9/ffffff?text=UBS',
-              tag: 'med-alarm',
-              requireInteraction: true, // Notificação FIXA até ser clicada
-              vibrate: [500, 200, 500]
-            });
-          });
-        } else {
-          activeNotification = new Notification(`⏰ HORA DO REMÉDIO: ${medName}`, {
-            body: `Horário: ${medTime}. Clique para desativar o alarme!`,
-            requireInteraction: true
-          });
-        }
+      // Comunicação com o Service Worker para funcionar em segundo plano
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SCHEDULE_ALARM',
+          medName: medName,
+          medTime: medTime
+        });
+      } else if ("Notification" in window && Notification.permission === "granted") {
+        activeNotification = new Notification(`⏰ HORA DO REMÉDIO: ${medName}`, {
+          body: `Horário: ${medTime}. Clique para desativar o alarme!`,
+          requireInteraction: true
+        });
       }
     }
 
     function stopAlarm() {
-      // Parar Som
       if (alarmInterval) {
         clearInterval(alarmInterval);
         alarmInterval = null;
       }
-      // Parar Vibração
       if (vibrationInterval) {
         clearInterval(vibrationInterval);
         vibrationInterval = null;
         if ("vibrate" in navigator) navigator.vibrate(0);
       }
-      // Esconder Tela
       document.getElementById('alarm-screen').classList.add('hidden');
 
-      // Fechar Notificação
       if (activeNotification) {
         activeNotification.close();
         activeNotification = null;
@@ -624,12 +614,11 @@
         if (!currentUser) return;
 
         const now = new Date();
-        const currentTime = now.toTimeString().substring(0, 5); // Ex: "08:00"
+        const currentTime = now.toTimeString().substring(0, 5);
 
         const meds = getMeds();
         meds.forEach(m => {
           if (m.time === currentTime) {
-            // Garante que o alarme toque apenas uma vez por minuto cadastrado
             const key = `${m.id}_${currentTime}`;
             if (!triggeredMeds[key]) {
               triggeredMeds[key] = true;
@@ -637,15 +626,12 @@
             }
           }
         });
-      }, 1000); // Checa a cada segundo
+      }, 1000);
     }
 
-    // SISTEMA DE PERMISSÃO E BLOQUEIO POR NOTIFICAÇÃO
+    // PERMISSÃO DE NOTIFICAÇÃO
     function requestNotificationPermission() {
-      if (!("Notification" in window)) {
-        alert("Este navegador não suporta notificações de sistema.");
-        return;
-      }
+      if (!("Notification" in window)) return;
 
       Notification.requestPermission().then((permission) => {
         if (permission === "granted") {
@@ -966,22 +952,6 @@
     }
 
     function setupPWA() {
-      const manifest = {
-        name: "Hiperdia UBS Jardim Três Marias",
-        short_name: "Hiperdia",
-        start_url: "./",
-        display: "standalone",
-        background_color: "#005CA9",
-        theme_color: "#005CA9",
-        icons: [{ src: "https://placehold.co/192x192/005CA9/ffffff?text=UBS", sizes: "192x192", type: "image/png" }]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = URL.createObjectURL(blob);
-      document.head.appendChild(link);
-
-      // REGISTRO DO SERVICE WORKER
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(err => console.log('Erro SW:', err));
       }
